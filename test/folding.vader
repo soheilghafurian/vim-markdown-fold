@@ -179,3 +179,66 @@ Execute (comment-style hash in code is not a header):
   " The line '# this is a comment' WILL start a new level-1 fold.
   AssertEqual 1, foldlevel(3), '# inside code block starts fold (known limitation)'
   bdelete!
+
+" ---------------------------------------------------------------------------
+" BufEnter reapplies fold settings when switching buffers
+" ---------------------------------------------------------------------------
+
+Execute (folding works after :b switch to markdown buffer):
+  " Create a markdown buffer and trigger ftplugin via filetype
+  new
+  file test_md.md
+  setlocal filetype=markdown
+  call setline(1, ['# Hello', 'world'])
+  let g:test_md_buf = bufnr('%')
+
+  " Create a second (non-markdown) buffer and switch to it
+  set hidden
+  enew
+  file other.txt
+  setlocal filetype=text
+  call setline(1, ['plain text'])
+
+  " Switch back to the markdown buffer with :b — this fires BufEnter
+  execute 'buffer ' . g:test_md_buf
+  normal! zx
+
+  AssertEqual 'expr', &foldmethod, 'foldmethod should be expr after :b switch'
+  AssertEqual 'markdownfold#foldexpr()', &foldexpr, 'foldexpr should be set after :b switch'
+  AssertEqual 1, foldlevel(1), 'h1 should be level 1 after :b switch'
+  AssertEqual 1, foldlevel(2), 'text should be level 1 after :b switch'
+
+  bdelete!
+  bdelete!
+
+Execute (folding works after :b switch when md buffer is also in another tab):
+  " Simulate vim -p: markdown buffer visible in a tab
+  new
+  file tabbed_md.md
+  setlocal filetype=markdown
+  call setline(1, ['## Section', 'content', '### Sub', 'detail'])
+  let g:test_md_buf2 = bufnr('%')
+
+  " Open it in a second tab (so it's displayed in two windows)
+  tab split
+
+  " In the second tab, switch to a plain buffer
+  enew
+  file plain.txt
+  setlocal filetype=text
+  call setline(1, ['not markdown'])
+
+  " Now switch back to the md buffer in this tab via :b
+  set hidden
+  execute 'buffer ' . g:test_md_buf2
+  normal! zx
+
+  AssertEqual 'expr', &foldmethod, 'foldmethod should be expr after tab :b switch'
+  AssertEqual 'markdownfold#foldexpr()', &foldexpr, 'foldexpr should be set after tab :b switch'
+  AssertEqual 2, foldlevel(1), 'h2 should be level 2 after tab :b switch'
+  AssertEqual 3, foldlevel(3), 'h3 should be level 3 after tab :b switch'
+
+  " Clean up both tabs
+  tabclose
+  bdelete!
+  bdelete!
