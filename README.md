@@ -39,6 +39,19 @@ If you use [vim-markdown](https://github.com/preservim/vim-markdown), disable it
 let g:vim_markdown_folding_disabled = 1
 ```
 
+## Testing
+
+Tests use [vader.vim](https://github.com/junegunn/vader.vim). Make sure it is installed (e.g. in `~/.vim/bundle/vader.vim`), then run from the plugin directory:
+
+```bash
+vim -Nu <(cat <<'EOF'
+set rtp+=~/.vim/bundle/vader.vim
+set rtp+=.
+filetype plugin indent on
+EOF
+) -c 'Vader! test/folding.vader'
+```
+
 ## License
 
 MIT
