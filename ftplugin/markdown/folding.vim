@@ -1,4 +1,4 @@
-" vim-markdown-fold - Stateless markdown folding by header level
+" vim-markdown-fold - Markdown folding by header, code block, and quote block
 " Maintainer: Soheil Ghafurian
 " License:    MIT
 

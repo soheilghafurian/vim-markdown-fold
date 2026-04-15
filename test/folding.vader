@@ -164,20 +164,121 @@ Execute (empty document has no folds):
   bdelete!
 
 " ---------------------------------------------------------------------------
-" Hash in non-header context
+" Fenced code blocks
 " ---------------------------------------------------------------------------
 
-Execute (comment-style hash in code is not a header):
+Execute (code block creates a nested fold under a header):
+  new
+  call setline(1, ['## Section', 'text', '```python', 'code line 1', 'code line 2', '```', 'after'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  AssertEqual 2, foldlevel(1), 'header should be level 2'
+  AssertEqual 2, foldlevel(2), 'text should be level 2'
+  AssertEqual 3, foldlevel(3), 'opening fence should be level 3'
+  AssertEqual 3, foldlevel(4), 'code line 1 should be level 3'
+  AssertEqual 3, foldlevel(5), 'code line 2 should be level 3'
+  AssertEqual 3, foldlevel(6), 'closing fence should be level 3'
+  AssertEqual 2, foldlevel(7), 'after should be level 2'
+  bdelete!
+
+Execute (code block before any header):
+  new
+  call setline(1, ['some text', '```', 'code', '```', 'after'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  AssertEqual 0, foldlevel(1), 'text before code block should be level 0'
+  AssertEqual 1, foldlevel(2), 'opening fence should be level 1'
+  AssertEqual 1, foldlevel(3), 'code should be level 1'
+  AssertEqual 1, foldlevel(4), 'closing fence should be level 1'
+  AssertEqual 0, foldlevel(5), 'after should be level 0'
+  bdelete!
+
+Execute (# inside code block does not start a header fold):
   new
   call setline(1, ['## Config', '```', '# this is a comment', '```', 'after block'])
   setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
   normal! zx
   AssertEqual 2, foldlevel(1), 'h2 should be level 2'
-  AssertEqual 2, foldlevel(2), 'fence open should be level 2'
-  " Note: this is a known limitation — the fold expression is stateless
-  " and cannot distinguish # inside code blocks from real headers.
-  " The line '# this is a comment' WILL start a new level-1 fold.
-  AssertEqual 1, foldlevel(3), '# inside code block starts fold (known limitation)'
+  AssertEqual 3, foldlevel(2), 'opening fence should be level 3'
+  AssertEqual 3, foldlevel(3), '# inside code block should be level 3 (not a header)'
+  AssertEqual 3, foldlevel(4), 'closing fence should be level 3'
+  AssertEqual 2, foldlevel(5), 'after block should be level 2'
+  bdelete!
+
+Execute (two code blocks create separate folds):
+  new
+  call setline(1, ['# Top', '```', 'a', '```', 'gap', '```', 'b', '```', 'end'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  AssertEqual 2, foldlevel(2), 'first opening fence should be level 2'
+  AssertEqual 2, foldlevel(3), 'first code should be level 2'
+  AssertEqual 2, foldlevel(4), 'first closing fence should be level 2'
+  AssertEqual 1, foldlevel(5), 'gap should be level 1'
+  AssertEqual 2, foldlevel(6), 'second opening fence should be level 2'
+  AssertEqual 2, foldlevel(7), 'second code should be level 2'
+  AssertEqual 2, foldlevel(8), 'second closing fence should be level 2'
+  AssertEqual 1, foldlevel(9), 'end should be level 1'
+  bdelete!
+
+" ---------------------------------------------------------------------------
+" Quote blocks
+" ---------------------------------------------------------------------------
+
+Execute (quote block creates a nested fold under a header):
+  new
+  call setline(1, ['## Section', 'text', '> quote 1', '> quote 2', '> quote 3', 'after'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  AssertEqual 2, foldlevel(1), 'header should be level 2'
+  AssertEqual 2, foldlevel(2), 'text should be level 2'
+  AssertEqual 3, foldlevel(3), 'first quote line should be level 3'
+  AssertEqual 3, foldlevel(4), 'second quote line should be level 3'
+  AssertEqual 3, foldlevel(5), 'third quote line should be level 3'
+  AssertEqual 2, foldlevel(6), 'after should be level 2'
+  bdelete!
+
+Execute (quote block before any header):
+  new
+  call setline(1, ['text', '> quoted 1', '> quoted 2', 'after'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  AssertEqual 0, foldlevel(1), 'text should be level 0'
+  AssertEqual 1, foldlevel(2), 'first quote line should be level 1'
+  AssertEqual 1, foldlevel(3), 'second quote line should be level 1'
+  AssertEqual 0, foldlevel(4), 'after should be level 0'
+  bdelete!
+
+Execute (single-line quote does not create a fold):
+  new
+  call setline(1, ['## Section', 'text', '> single quote', 'after'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  AssertEqual 2, foldlevel(3), 'single quote should stay at header level'
+  AssertEqual 2, foldlevel(4), 'after single quote should stay at header level'
+  bdelete!
+
+Execute (two quote blocks separated by text create separate folds):
+  new
+  call setline(1, ['# Top', '> q1a', '> q1b', 'gap', '> q2a', '> q2b', 'end'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  AssertEqual 2, foldlevel(2), 'first quote block line 1 should be level 2'
+  AssertEqual 2, foldlevel(3), 'first quote block line 2 should be level 2'
+  AssertEqual 1, foldlevel(4), 'gap should be level 1'
+  AssertEqual 2, foldlevel(5), 'second quote block line 1 should be level 2'
+  AssertEqual 2, foldlevel(6), 'second quote block line 2 should be level 2'
+  AssertEqual 1, foldlevel(7), 'end should be level 1'
+  bdelete!
+
+Execute (> inside code block is not a quote):
+  new
+  call setline(1, ['# Top', '```', '> not a quote', '```', 'after'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  AssertEqual 2, foldlevel(2), 'opening fence should be level 2'
+  AssertEqual 2, foldlevel(3), '> inside code should be level 2 (not a quote)'
+  AssertEqual 2, foldlevel(4), 'closing fence should be level 2'
+  AssertEqual 1, foldlevel(5), 'after should be level 1'
   bdelete!
 
 " ---------------------------------------------------------------------------
