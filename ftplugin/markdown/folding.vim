@@ -19,3 +19,7 @@ augroup markdown_fold_winlocal
         \   setlocal foldmethod=expr foldexpr=markdownfold#foldexpr() |
         \ endif
 augroup END
+
+command! -buffer MarkdownFoldBlocks       call markdownfold#close_blocks()
+command! -buffer MarkdownUnfoldBlocks     call markdownfold#open_blocks()
+command! -buffer MarkdownToggleBlocks     call markdownfold#toggle_blocks()

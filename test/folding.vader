@@ -285,6 +285,34 @@ Execute (> inside code block is not a quote):
 " BufEnter reapplies fold settings when switching buffers
 " ---------------------------------------------------------------------------
 
+" ---------------------------------------------------------------------------
+" Toggle blocks
+" ---------------------------------------------------------------------------
+
+Execute (toggle closes open block folds, then opens them again):
+  new
+  call setline(1, ['# Top', '```', 'code', '```', 'gap', '> q1', '> q2', 'end'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  " Start with all folds open
+  normal! zR
+
+  " First toggle should close block folds
+  call markdownfold#toggle_blocks()
+  AssertEqual -1, foldclosed(1), 'header fold should stay open'
+  AssertNotEqual -1, foldclosed(2), 'code block should be closed after first toggle'
+  AssertNotEqual -1, foldclosed(6), 'quote block should be closed after first toggle'
+
+  " Second toggle should open them again
+  call markdownfold#toggle_blocks()
+  AssertEqual -1, foldclosed(2), 'code block should be open after second toggle'
+  AssertEqual -1, foldclosed(6), 'quote block should be open after second toggle'
+  bdelete!
+
+" ---------------------------------------------------------------------------
+" BufEnter reapplies fold settings when switching buffers
+" ---------------------------------------------------------------------------
+
 Execute (folding works after :b switch to markdown buffer):
   " Create a markdown buffer and trigger ftplugin via filetype
   new
