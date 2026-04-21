@@ -313,6 +313,60 @@ Execute (toggle closes open block folds, then opens them again):
 " BufEnter reapplies fold settings when switching buffers
 " ---------------------------------------------------------------------------
 
+Execute (close_blocks skips blocks inside closed header folds):
+  new
+  call setline(1, ['# Open Section', '```', 'visible code', '```', '# Closed Section', '```', 'hidden code', '```', 'end'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  " Open everything first
+  normal! zR
+  " Close the second header fold (line 5) to hide its code block
+  execute '5foldclose'
+  " Now close_blocks should only close the visible code block (line 2)
+  call markdownfold#close_blocks()
+  AssertNotEqual -1, foldclosed(2), 'visible code block should be closed'
+  AssertEqual 5, foldclosed(6), 'hidden code block should still be inside closed header fold'
+  bdelete!
+
+Execute (open_blocks skips blocks inside closed header folds):
+  new
+  call setline(1, ['# Open Section', '```', 'visible code', '```', '# Closed Section', '```', 'hidden code', '```', 'end'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  " Close all folds
+  normal! zM
+  " Open only the first header fold
+  execute '1foldopen'
+  " The code block at line 2 is now visible but closed; line 6 is hidden inside closed header
+  call markdownfold#open_blocks()
+  AssertEqual -1, foldclosed(2), 'visible code block should be opened'
+  AssertNotEqual -1, foldclosed(5), 'second header fold should remain closed'
+  bdelete!
+
+Execute (toggle_blocks ignores blocks inside closed header folds):
+  new
+  call setline(1, ['# Open Section', '```', 'code', '```', '> q1', '> q2', '# Closed Section', '```', 'hidden', '```', 'end'])
+  setlocal foldmethod=expr foldexpr=markdownfold#foldexpr()
+  normal! zx
+  normal! zR
+  " Close the second header fold
+  execute '7foldclose'
+  " Toggle should close only visible blocks
+  call markdownfold#toggle_blocks()
+  AssertNotEqual -1, foldclosed(2), 'visible code block should be closed'
+  AssertNotEqual -1, foldclosed(5), 'visible quote block should be closed'
+  AssertEqual 7, foldclosed(8), 'hidden code block should still be inside closed header'
+  " Toggle again should open only visible blocks
+  call markdownfold#toggle_blocks()
+  AssertEqual -1, foldclosed(2), 'visible code block should be open'
+  AssertEqual -1, foldclosed(5), 'visible quote block should be open'
+  AssertEqual 7, foldclosed(8), 'hidden code block should still be inside closed header'
+  bdelete!
+
+" ---------------------------------------------------------------------------
+" BufEnter reapplies fold settings when switching buffers
+" ---------------------------------------------------------------------------
+
 Execute (folding works after :b switch to markdown buffer):
   " Create a markdown buffer and trigger ftplugin via filetype
   new

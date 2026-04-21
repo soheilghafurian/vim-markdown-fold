@@ -78,18 +78,19 @@ endfunction
 function! markdownfold#close_blocks() abort
   call s:ensure_cache()
   let save_pos = getpos('.')
-  " Code blocks: fold at every opening fence.
+  " Code blocks: fold at every opening fence (only if visible).
   for lnum in keys(b:_mkfold_fence)
-    if b:_mkfold_fence[lnum] ==# 'open'
+    if b:_mkfold_fence[lnum] ==# 'open' && foldclosed(lnum) == -1
       execute lnum . 'foldclose'
     endif
   endfor
-  " Quote blocks: fold at the first line of each multi-line quote run.
+  " Quote blocks: fold at the first line of each multi-line quote run (only if visible).
   let last = line('$')
   let lnum = 1
   while lnum <= last
     if getline(lnum) =~# '^>' && (lnum == 1 || getline(lnum - 1) !~# '^>')
           \ && lnum < last && getline(lnum + 1) =~# '^>'
+          \ && foldclosed(lnum) == -1
       execute lnum . 'foldclose'
     endif
     let lnum += 1
@@ -103,7 +104,7 @@ function! markdownfold#toggle_blocks() abort
   call s:ensure_cache()
   let any_closed = 0
   for lnum in keys(b:_mkfold_fence)
-    if b:_mkfold_fence[lnum] ==# 'open' && foldclosed(lnum) != -1
+    if b:_mkfold_fence[lnum] ==# 'open' && foldclosed(lnum) == +lnum
       let any_closed = 1
       break
     endif
@@ -114,7 +115,7 @@ function! markdownfold#toggle_blocks() abort
     while lnum <= last
       if getline(lnum) =~# '^>' && (lnum == 1 || getline(lnum - 1) !~# '^>')
             \ && lnum < last && getline(lnum + 1) =~# '^>'
-            \ && foldclosed(lnum) != -1
+            \ && foldclosed(lnum) == lnum
         let any_closed = 1
         break
       endif
@@ -133,7 +134,7 @@ function! markdownfold#open_blocks() abort
   call s:ensure_cache()
   let save_pos = getpos('.')
   for lnum in keys(b:_mkfold_fence)
-    if b:_mkfold_fence[lnum] ==# 'open'
+    if b:_mkfold_fence[lnum] ==# 'open' && foldclosed(lnum) == +lnum
       execute lnum . 'foldopen'
     endif
   endfor
@@ -142,6 +143,7 @@ function! markdownfold#open_blocks() abort
   while lnum <= last
     if getline(lnum) =~# '^>' && (lnum == 1 || getline(lnum - 1) !~# '^>')
           \ && lnum < last && getline(lnum + 1) =~# '^>'
+          \ && foldclosed(lnum) == lnum
       execute lnum . 'foldopen'
     endif
     let lnum += 1
